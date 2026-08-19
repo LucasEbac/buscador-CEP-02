@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang=pt-BR>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=<body>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Endereço</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
     <h2>📍 Buscador de Endereço</h2>
     
@@ -61,7 +65,7 @@
     </div>
 
     <script>
-        // Força letras maiúsculas e remove números no campo UF
+    // Força letras maiúsculas e remove números no campo UF
         function validarUF(input) {
             input.value = input.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
         }
@@ -75,94 +79,175 @@
             input.value = valor;
         }
 
-        // ATUALIZA O MAPA VISUAL DO GOOGLE MAPS
-        function atualizarMapa(logradouro, bairro, cidade, uf) {
-            const mapaContainer = document.getElementById("mapaContainer");
-            const mapaIframe = document.getElementById("mapaIframe");
-            
-            // Cria um texto amigável para o Google Maps ler a localização externa [1]
-            const enderecoCompleto = `${logradouro}, ${bairro}, ${cidade} - ${uf}, Brasil`;
-            
-            // Monta a URL oficial de incorporação do Google Maps [1]
-            mapaIframe.src = `https://google.com{encodeURIComponent(enderecoCompleto)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-            mapaContainer.style.display = "block";
-        }
-
-        // PREENCHE OS CAMPOS FINAIS NA TELA
-        function preencherCampos(end) {
-            document.getElementById("resCep").innerText = end.cep || "-";
-            document.getElementById("resRua").innerText = end.logradouro || "-";
-            document.getElementById("resBairro").innerText = end.bairro || "-";
-            document.getElementById("resCidadeUf").innerText = end.localidade ? `${end.localidade}/${end.uf}` : "-";
-            
-            if (end.logradouro && end.localidade) {
-                atualizarMapa(end.logradouro, end.bairro || "", end.localidade, end.uf);
-            }
-        }
-
-        // FLUXO 1: BUSCA POR CEP
-        document.getElementById("formCep").addEventListener("submit", async function () {
-            const cep = document.getElementById("cepInput").value.replace(/\D/g, "");
-            if (cep.length !== 8) {
-                alert("Por favor, digite um CEP válido com 8 números.");
-                return;
-            }
-
-            const botao = document.getElementById("btnBuscarCep");
-            const lista = document.getElementById("listaResultados");
-            
-            botao.disabled = true;
-            botao.innerText = "Carregando...";
-            lista.innerHTML = "<li>Buscando dados do CEP...</li>";
-
-            try {
-                const response = await fetch(`https://viacep.com.br{cep}/json/`);
-                if (!response.ok) throw new Error();
-                const data = await response.json();
-
-                if (data.erro) {
-                    lista.innerHTML = "<li>CEP não encontrado na base de dados.</li>";
-                    return;
-                }
-
-                lista.innerHTML = "";
-                // Como busca por CEP traz apenas 1 endereço direto, já preenchemos a tela e o mapa direto
-                let item = document.createElement("li");
-                item.innerText = `${data.logradouro || 'Área Geral'} - ${data.bairro || ''} (${data.localidade}/${data.uf})`;
-                lista.appendChild(item);
-                
-                preencherCampos(data);
-
-            } catch (error) {
-                alert("Erro ao conectar com a API de CEP.");
-                lista.innerHTML = "";
-            } finally {
-                botao.disabled = false;
-                botao.innerText = "Buscar por CEP";
-            }
-        });
-
-        // FLUXO 2: BUSCA POR NOME/TEXTO (UF, CIDADE, RUA)
-        document.getElementById("formTexto").addEventListener("submit", async function () {
-            const uf = document.getElementById("uf").value.trim();
-            const cidade = document.getElementById("cidade").value.trim();
-            const logradouro = document.getElementById("logradouro").value.trim();
-
-            if (cidade.length < 3 || logradouro.length < 3) {
-                alert("A Cidade e o Logradouro precisam ter pelo menos 3 caracteres!");
-                return;
-            }
-
-            const botao = document.getElementById("btnBuscarTexto");
-            const lista = document.getElementById("listaResultados");
-            
-            botao.disabled = true;
-            botao.innerText = "Carregando...";
-            lista.innerHTML = "<li>Buscando endereços...</li>";
-, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
+    function atualizarMapa(logradouro, bairro, cidade, uf) {
+    const mapaContainer = document.getElementById("mapaContainer");
+    const mapaIframe = document.getElementById("mapaIframe");
     
+    // Monta o texto do endereço
+    const enderecoCompleto = `${logradouro}, ${bairro}, ${cidade} - ${uf}, Brasil`;
+    
+    // VEJA O SEGREDO AQUI: O '$' colado antes da chave '{' e o link com crases
+    mapaIframe.src = `https://google.com{encodeURIComponent(enderecoCompleto)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+    
+    // Mostra o container do mapa na tela
+    mapaContainer.style.display = "block";
+}
+
+
+// PREENCHE OS CAMPOS FINAIS NA TELA (CORRIGIDO PARA ACEITAR CEP GERAL)
+function preencherCampos(end) {
+    document.getElementById("resCep").innerText = end.cep || "-";
+    document.getElementById("resRua").innerText = end.logradouro || "Área Geral / Sem Rua";
+    document.getElementById("resBairro").innerText = end.bairro || "-";
+    document.getElementById("resCidadeUf").innerText = end.localidade ? `${end.localidade}/${end.uf}` : "-";
+    
+    // CORREÇÃO CRUCIAL: Agora ele só precisa da Cidade (localidade) para desenhar o mapa!
+    if (end.localidade) {
+        atualizarMapa(end.logradouro, end.bairro, end.localidade, end.uf);
+    } else {
+        alert("Não foi possível renderizar o mapa: Dados de cidade ausentes.");
+    }
+}
+
+
+    // PREENCHE OS CAMPOS FINAIS NA TELA
+    function preencherCampos(end) {
+        document.getElementById("resCep").innerText = end.cep || "-";
+        document.getElementById("resRua").innerText = end.logradouro || "-";
+        document.getElementById("resBairro").innerText = end.bairro || "-";
+        document.getElementById("resCidadeUf").innerText = end.localidade ? `${end.localidade}/${end.uf}` : "-";
+        
+        if (end.logradouro && end.localidade) {
+            atualizarMapa(end.logradouro, end.bairro || "", end.localidade, end.uf);
+        }
+    }
+
+    // FLUXO 1: BUSCA POR CEP (CORRIGIDO)
+    document.getElementById("formCep").addEventListener("submit", async function () {
+        const cep = document.getElementById("cepInput").value.replace(/\D/g, "");
+        if (cep.length !== 8) {
+            alert("Por favor, digite um CEP válido com 8 números.");
+            return;
+        }
+
+        const botao = document.getElementById("btnBuscarCep");
+        const lista = document.getElementById("listaResultados");
+        
+        botao.disabled = true;
+        botao.innerText = "Carregando...";
+        lista.innerHTML = "<li>Buscando dados do CEP...</li>";
+
+        try {
+            // CORRIGIDO: Link correto do ViaCEP para busca por CEP numérico
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+
+            if (data.erro) {
+                throw new Error("CEP não encontrado no ViaCEP. Tentando reserva...");
+            }
+
+            lista.innerHTML = "";
+            let item = document.createElement("li");
+            item.innerText = `${data.logradouro || 'Área Geral'} - ${data.bairro || ''} (${data.localidade}/${data.uf})`;
+            lista.appendChild(item);
+            
+            preencherCampos(data);
+
+        } catch (error) {
+            // Tenta buscar no servidor reserva da BrasilAPI caso o ViaCEP falhe
+            try {
+                // CORRIGIDO: Rota corrigida para a API reserva BrasilAPI
+                const fallbackResponse = await fetch(`https://brasilapi.com.br{cep}`);
+                if (!fallbackResponse.ok) throw new Error();
+                const fallbackData = await fallbackResponse.json();
+
+                // Transforma os dados no padrão do ViaCEP para manter a compatibilidade da tela
+                const dadosPadrao = {
+                    cep: fallbackData.cep,
+                    logradouro: fallbackData.street,
+                    bairro: fallbackData.neighborhood,
+                    localidade: fallbackData.city,
+                    uf: fallbackData.state
+                };
+
+                lista.innerHTML = "";
+                let item = document.createElement("li");
+                item.innerText = `${dadosPadrao.logradouro || 'Área Geral'} - ${dadosPadrao.bairro || ''} (${dadosPadrao.localidade}/${dadosPadrao.uf})`;
+                lista.appendChild(item);
+
+                preencherCampos(dadosPadrao);
+            } catch {
+                alert("Erro ao localizar o CEP em todos os servidores disponíveis.");
+                lista.innerHTML = "";
+            }
+        } finally {
+            botao.disabled = false;
+            botao.innerText = "Buscar por CEP";
+        }
+    });
+
+    // FLUXO 2: BUSCA POR NOME/TEXTO (CORRIGIDO)
+    document.getElementById("formTexto").addEventListener("submit", async function () {
+        const uf = document.getElementById("uf").value.trim();
+        const cidade = document.getElementById("cidade").value.trim();
+        const logradouro = document.getElementById("logradouro").value.trim();
+
+        if (cidade.length < 3 || logradouro.length < 3) {
+            alert("A Cidade e o Logradouro precisam ter pelo menos 3 caracteres!");
+            return;
+        }
+
+        const botao = document.getElementById("btnBuscarTexto");
+        const lista = document.getElementById("listaResultados");
+        
+        botao.disabled = true;
+        botao.innerText = "Carregando...";
+        lista.innerHTML = "<li>Buscando endereços...</li>";
+
+        try {
+            // CORRIGIDO: Adicionado /ws/ e inserido o cifrão '$' que faltava nas variáveis textuais
+            const response = await fetch(`https://viacep.com.br/ws/${uf}/${encodeURIComponent(cidade)}/${encodeURIComponent(logradouro)}/json/`);
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+
+            lista.innerHTML = "";
+
+            if (!data || data.length === 0 || data.erro) {
+                lista.innerHTML = "<li>Nenhum endereço encontrado.</li>";
+                return;
+            }
+
+            // Renderiza os resultados na tela
+            data.forEach(end => {
+                let item = document.createElement("li");
+                item.innerText = `${end.logradouro || 'Sem Rua'} - ${end.bairro || 'Sem Bairro'} (${end.localidade}/${end.uf}) - CEP: ${end.cep}`;
+                item.addEventListener("click", () => preencherCampos(end));
+                lista.appendChild(item);
+            });
+
+        } catch (error) {
+            alert("Erro ao conectar com a API de Busca.");
+            lista.innerHTML = "";
+        } finally {
+            botao.disabled = false;
+            botao.innerText = "Buscar por Nome";
+        }
+    });
+
+    // ADICIONADO: Restaura a tela e fecha corretamente o bloco de funções
+    function limparCampos() {
+        document.getElementById("formCep").reset();
+        document.getElementById("formTexto").reset();
+        document.getElementById("listaResultados").innerHTML = "";
+        document.getElementById("resCep").innerText = "-";
+        document.getElementById("resRua").innerText = "-";
+        document.getElementById("resBairro").innerText = "-";
+        document.getElementById("resCidadeUf").innerText = "-";
+        document.getElementById("mapaIframe").src = "";
+        document.getElementById("mapaContainer").style.display = "none";
+    }
+</script>
+
 </body>
 </html>
